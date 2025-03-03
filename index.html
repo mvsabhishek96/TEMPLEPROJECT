@@ -6,21 +6,21 @@
         body {
             font-family: sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            justify-content: center;
+            height: 100vh;
             margin: 0;
             background-color: #f4f4f4;
-            flex-direction: column;
         }
 
-        #customForm, #confirmation, #redirectMessage, #submissions {
+        #customForm, #confirmation, #redirectMessage {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 400px;
+            width: 300px;
+            margin-bottom: 20px;
         }
 
         #customForm label {
@@ -30,7 +30,9 @@
 
         #customForm input[type="text"],
         #customForm input[type="tel"],
-        #customForm button, #confirmation button, #viewSubmissionsButton {
+        #customForm button, 
+        #confirmation button, 
+        #viewSubmissionsBtn {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -39,26 +41,35 @@
             box-sizing: border-box;
         }
 
-        #customForm button, #confirmation button, #viewSubmissionsButton {
+        #customForm button, #confirmation button, #viewSubmissionsBtn {
             background-color: #4CAF50;
             color: white;
             border: none;
             cursor: pointer;
         }
 
-        #customForm button:hover, #confirmation button:hover, #viewSubmissionsButton:hover {
+        #customForm button:hover, #confirmation button:hover, #viewSubmissionsBtn:hover {
             background-color: #45a049;
         }
 
-        #message, #confirmation, #redirectMessage, #submissions {
+        #message, #confirmation, #redirectMessage, #submissionsContainer {
             margin-top: 10px;
             text-align: center;
         }
 
-        #confirmation, #redirectMessage, #submissions {
+        #confirmation, #redirectMessage {
             display: none;
         }
 
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        /* Loading spinner styles */
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #4CAF50;
@@ -76,6 +87,8 @@
     </style>
 </head>
 <body>
+
+    <!-- Form Section -->
     <div id="customForm">
         <h2>Enter Your Details</h2>
         <label for="name">Name:</label>
@@ -88,10 +101,10 @@
         <input type="tel" id="mobile" name="mobile" required>
 
         <button id="submitButton" onclick="submitForm()">Submit</button>
-        <button id="viewSubmissionsButton" onclick="viewSubmissions()">View Submissions</button>
         <div id="message"></div>
     </div>
 
+    <!-- Confirmation Section -->
     <div id="confirmation">
         <h2>Confirm Your Details</h2>
         <p><strong>Name:</strong> <span id="confirmName"></span></p>
@@ -100,15 +113,17 @@
         <button id="saveWhatsappButton" onclick="saveAndWhatsApp()">Save & WhatsApp</button>
     </div>
 
+    <!-- Redirect Section -->
     <div id="redirectMessage">
         <h2>Redirecting to WhatsApp...</h2>
         <div class="loader"></div>
     </div>
 
-    <div id="submissions">
-        <h2>Previous Submissions</h2>
-        <ul id="submissionsList"></ul>
-    </div>
+    <!-- View Submissions Button -->
+    <button id="viewSubmissionsBtn" onclick="viewSubmissions()">View Submissions</button>
+
+    <!-- Submissions List -->
+    <div id="submissionsContainer"></div>
 
     <script>
         let submittedName, submittedSurname, submittedMobile;
@@ -119,6 +134,8 @@
             if (isSubmitting) return;
 
             isSubmitting = true;
+            document.getElementById('submitButton').disabled = true;
+
             submittedName = document.getElementById('name').value;
             submittedSurname = document.getElementById('surname').value;
             submittedMobile = document.getElementById('mobile').value;
@@ -131,24 +148,31 @@
             document.getElementById('confirmation').style.display = 'block';
 
             isSubmitting = false;
+            document.getElementById('submitButton').disabled = false;
         }
 
         function saveAndWhatsApp() {
             if (isSaveWhatsappClicked) return;
 
             isSaveWhatsappClicked = true;
+            document.getElementById('saveWhatsappButton').disabled = true;
+
             document.getElementById('confirmation').style.display = 'none';
             document.getElementById('redirectMessage').style.display = 'block';
 
-            const scriptURL = 'https://script.google.com/macros/s/YOUR_GOOGLE_SCRIPT_URL/exec';
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbxI-wVDbTfy7pRJKROXyjWUfnpVO09HU91M4BiRa8sBoZLXXjgNR2aeudwWKnQ7a_ck/exec';
 
             const formData = new FormData();
             formData.append('name', submittedName);
             formData.append('surname', submittedSurname);
             formData.append('mobile', submittedMobile);
 
-            fetch(scriptURL, { method: 'POST', body: formData })
-            .then(() => {
+            fetch(scriptURL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
                 const whatsappURL = `https://wa.me/${submittedMobile}?text=Hello!`;
                 window.open(whatsappURL, '_blank');
             })
@@ -156,24 +180,23 @@
         }
 
         function viewSubmissions() {
-            document.getElementById('customForm').style.display = 'none';
-            document.getElementById('submissions').style.display = 'block';
-
-            const scriptURL = 'https://script.google.com/macros/s/YOUR_GOOGLE_SCRIPT_URL/exec?action=get';
-
-            fetch(scriptURL)
-                .then(response => response.json())
-                .then(data => {
-                    const submissionsList = document.getElementById('submissionsList');
-                    submissionsList.innerHTML = '';
+            fetch('https://script.google.com/macros/s/AKfycbxI-wVDbTfy7pRJKROXyjWUfnpVO09HU91M4BiRa8sBoZLXXjgNR2aeudwWKnQ7a_ck/exec')
+            .then(response => response.json())
+            .then(data => {
+                let submissionList = '<h3>Previous Submissions:</h3><ul>';
+                if (data.message) {
+                    submissionList += `<li>${data.message}</li>`;
+                } else {
                     data.forEach(entry => {
-                        const listItem = document.createElement('li');
-                        listItem.textContent = `${entry.name} ${entry.surname} - ${entry.mobile}`;
-                        submissionsList.appendChild(listItem);
+                        submissionList += `<li>${entry.Name} ${entry.Surname} - ${entry.Mobile}</li>`;
                     });
-                })
-                .catch(error => console.error('Error fetching submissions!', error.message));
+                }
+                submissionList += '</ul>';
+                document.getElementById('submissionsContainer').innerHTML = submissionList;
+            })
+            .catch(error => console.error('Error fetching submissions:', error));
         }
     </script>
+
 </body>
 </html>
