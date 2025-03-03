@@ -8,17 +8,19 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             background-color: #f4f4f4;
+            flex-direction: column;
         }
 
-        #customForm, #confirmation, #redirectMessage {
+        #customForm, #confirmation, #redirectMessage, #submissions {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            width: 300px;
+            width: 90%;
+            max-width: 400px;
         }
 
         #customForm label {
@@ -28,7 +30,7 @@
 
         #customForm input[type="text"],
         #customForm input[type="tel"],
-        #customForm button, #confirmation button {
+        #customForm button, #confirmation button, #viewSubmissionsButton {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -37,35 +39,26 @@
             box-sizing: border-box;
         }
 
-        #customForm button, #confirmation button {
+        #customForm button, #confirmation button, #viewSubmissionsButton {
             background-color: #4CAF50;
             color: white;
             border: none;
             cursor: pointer;
         }
 
-        #customForm button:hover, #confirmation button:hover {
+        #customForm button:hover, #confirmation button:hover, #viewSubmissionsButton:hover {
             background-color: #45a049;
         }
 
-        #message, #confirmation, #redirectMessage {
+        #message, #confirmation, #redirectMessage, #submissions {
             margin-top: 10px;
             text-align: center;
         }
 
-        #confirmation, #redirectMessage {
+        #confirmation, #redirectMessage, #submissions {
             display: none;
         }
 
-        .success {
-            color: green;
-        }
-
-        .error {
-            color: red;
-        }
-
-        /* Loading spinner styles */
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #4CAF50;
@@ -95,6 +88,7 @@
         <input type="tel" id="mobile" name="mobile" required>
 
         <button id="submitButton" onclick="submitForm()">Submit</button>
+        <button id="viewSubmissionsButton" onclick="viewSubmissions()">View Submissions</button>
         <div id="message"></div>
     </div>
 
@@ -111,19 +105,20 @@
         <div class="loader"></div>
     </div>
 
+    <div id="submissions">
+        <h2>Previous Submissions</h2>
+        <ul id="submissionsList"></ul>
+    </div>
+
     <script>
         let submittedName, submittedSurname, submittedMobile;
         let isSubmitting = false;
         let isSaveWhatsappClicked = false;
 
         function submitForm() {
-            if (isSubmitting) {
-                return;
-            }
+            if (isSubmitting) return;
 
             isSubmitting = true;
-            document.getElementById('submitButton').disabled = true;
-
             submittedName = document.getElementById('name').value;
             submittedSurname = document.getElementById('surname').value;
             submittedMobile = document.getElementById('mobile').value;
@@ -136,42 +131,48 @@
             document.getElementById('confirmation').style.display = 'block';
 
             isSubmitting = false;
-            document.getElementById('submitButton').disabled = false;
         }
 
         function saveAndWhatsApp() {
-            if (isSaveWhatsappClicked) {
-                return;
-            }
+            if (isSaveWhatsappClicked) return;
 
             isSaveWhatsappClicked = true;
-            document.getElementById('saveWhatsappButton').disabled = true;
-
-            // Hide the confirmation section immediately
             document.getElementById('confirmation').style.display = 'none';
-
-            // Show the redirect message and loading spinner
             document.getElementById('redirectMessage').style.display = 'block';
 
-            const scriptURL = 'https://script.google.com/macros/s/AKfycbx9vqNPyp75ZdHjPTm6i4EJ-DikCesLMCUMv_tvsbCyFdNxUw0EkAAQcltjj84FoqZK/exec'; // Replace with your URL
+            const scriptURL = 'https://script.google.com/macros/s/YOUR_GOOGLE_SCRIPT_URL/exec';
 
             const formData = new FormData();
             formData.append('name', submittedName);
             formData.append('surname', submittedSurname);
             formData.append('mobile', submittedMobile);
 
-            fetch(scriptURL, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text())
-            .then(data => {
+            fetch(scriptURL, { method: 'POST', body: formData })
+            .then(() => {
                 const whatsappURL = `https://wa.me/${submittedMobile}?text=Hello!`;
                 window.open(whatsappURL, '_blank');
             })
-            .catch(error => {
-                console.error('Error!', error.message);
-            });
+            .catch(error => console.error('Error!', error.message));
+        }
+
+        function viewSubmissions() {
+            document.getElementById('customForm').style.display = 'none';
+            document.getElementById('submissions').style.display = 'block';
+
+            const scriptURL = 'https://script.google.com/macros/s/YOUR_GOOGLE_SCRIPT_URL/exec?action=get';
+
+            fetch(scriptURL)
+                .then(response => response.json())
+                .then(data => {
+                    const submissionsList = document.getElementById('submissionsList');
+                    submissionsList.innerHTML = '';
+                    data.forEach(entry => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = `${entry.name} ${entry.surname} - ${entry.mobile}`;
+                        submissionsList.appendChild(listItem);
+                    });
+                })
+                .catch(error => console.error('Error fetching submissions!', error.message));
         }
     </script>
 </body>
